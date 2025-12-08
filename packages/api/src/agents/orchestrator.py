@@ -8,7 +8,6 @@ import google.generativeai as genai
 from src.agents.roadmap_agent import RoadmapAgent
 from src.agents.customer_agent import CustomerAgent
 from src.agents.impact_agent import ImpactAgent
-from src.ingestion import ingest_roadmap
 
 
 def route_to_roadmap_agent(query: str) -> str:
@@ -31,10 +30,8 @@ def route_to_impact_agent(query: str) -> str:
 
 def refresh_roadmap_data() -> str:
     """Refresh the roadmap data from the M365 API."""
-    result = ingest_roadmap()
-    if result["success"]:
-        return f"✓ Roadmap data refreshed. {result['count']} items ingested."
-    return f"✗ Failed to refresh roadmap data: {result['message']}"
+    # Ingestion is now a separate service - it runs on a daily schedule
+    return "ℹ️ Roadmap data is automatically refreshed daily by the ingestion service. No manual refresh needed."
 
 
 # Define routing tools for the orchestrator
