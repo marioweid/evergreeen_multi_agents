@@ -4,13 +4,11 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "fastapi>=0.124.0",
-    "google-generativeai>=0.8.5",
-    "pgvector>=0.4.2",
-    "psycopg2-binary>=2.9.11",
-    "pydantic>=2.12.5",
-    "requests>=2.32.5",
-    "rich>=14.2.0",
-    "uvicorn[standard]>=0.38.0",
-]
+
+[tool.uv.sources]
+backend = { workspace = true }
+pipeline = { workspace = true }
+
+[tool.uv.workspace]
+members = ["backend", "pipeline"]
+exclude = []

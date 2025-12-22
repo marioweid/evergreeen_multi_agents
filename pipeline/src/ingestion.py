@@ -11,10 +11,10 @@ from datetime import datetime
 from typing import Optional
 
 
-from src.database import (
+from database import (
     RoadmapItem, upsert_roadmap_items, get_db_connection, init_db
 )
-from src.bootstrap import get_genai_client
+from bootstrap import get_genai_client
 
 
 def get_last_ingestion_time(database_url: str) -> Optional[datetime]:

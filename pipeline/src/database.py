@@ -12,7 +12,7 @@ from google.genai.types import EmbedContentConfig, EmbedContentResponse
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
 
-from src.bootstrap import get_db_connection
+from bootstrap import get_db_connection
 
 
 class RoadmapItem(BaseModel):
