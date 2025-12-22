@@ -8,12 +8,11 @@ Uses Google's Gemini embedding API for generating embeddings.
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
 import google.genai as genai
 from pgvector.psycopg2 import register_vector
-from google.genai.types import EmbedContentConfig, EmbedContentResponse
+from google.genai.types import EmbedContentConfig
 
 # Database connection settings
 DATABASE_URL = os.environ.get(
@@ -28,14 +27,14 @@ EMBEDDING_DIMENSIONS = 768
 
 class Customer(BaseModel):
     """Customer model for the database."""
-    id: Optional[int] = None
+    id: int | None = None
     name: str
     description: str
     products_used: str  # Comma-separated list of M365 products
     priority: str = "medium"  # low, medium, high
-    notes: Optional[str] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    notes: str | None = None
+    created_at: datetime| None = None
+    updated_at: datetime| None = None
 
 
 class RoadmapItem(BaseModel):
@@ -44,11 +43,11 @@ class RoadmapItem(BaseModel):
     title: str
     description: str
     status: str
-    public_disclosure_date: Optional[str] = None
+    public_disclosure_date: str | None = None
     products: list[str] = []
     platforms: list[str] = []
     cloud_instances: list[str] = []
-    release_phase: Optional[str] = None
+    release_phase: str | None = None
 
 
 def get_db_connection(database_url: str):
@@ -146,7 +145,7 @@ def add_customer(customer: Customer, database_url: str) -> int:
     return customer_id
 
 
-def get_customer(customer_id: int, database_url: str) -> Optional[Customer]:
+def get_customer(customer_id: int, database_url: str) -> Customer | None:
     """Get a customer by ID."""
     conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -160,7 +159,7 @@ def get_customer(customer_id: int, database_url: str) -> Optional[Customer]:
     return None
 
 
-def get_customer_by_name(name: str, database_url: str) -> Optional[Customer]:
+def get_customer_by_name(name: str, database_url: str) -> Customer | None:
     """Get a customer by name."""
     conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -221,7 +220,7 @@ def delete_customer(customer_id: int) -> bool:
     return success
 
 
-def search_roadmap(query: str, database_url: str, n_results: int = 5, filter_products: Optional[list[str]] = None) -> list[dict]:
+def search_roadmap(query: str, database_url: str, n_results: int = 5, filter_products: list[str] | None = None) -> list[dict]:
     """Search the roadmap using vector similarity (cosine distance)."""
     conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor(cursor_factory=RealDictCursor)

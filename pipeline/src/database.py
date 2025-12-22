@@ -5,8 +5,6 @@ Handles PostgreSQL with pgvector for both customer data and roadmap vector embed
 Uses Google's Gemini embedding API for generating embeddings.
 """
 
-from typing import Optional
-
 import google.genai as genai
 from google.genai.types import EmbedContentConfig, EmbedContentResponse
 from psycopg2.extras import RealDictCursor
@@ -22,11 +20,11 @@ class RoadmapItem(BaseModel):
     title: str
     description: str
     status: str
-    public_disclosure_date: Optional[str] = None
+    public_disclosure_date: str | None = None
     products: list[str] = []
     platforms: list[str] = []
     cloud_instances: list[str] = []
-    release_phase: Optional[str] = None
+    release_phase: str | None = None
 
 
 def init_db(database_url: str, embedding_dimensions: int) -> None:
@@ -179,7 +177,7 @@ def search_roadmap(
     embedding_model: str,
     database_url: str,
     n_results: int = 5,
-    filter_products: Optional[list[str]] = None,
+    filter_products: list[str] | None = None,
 ) -> list[dict]:
     """Search the roadmap using vector similarity (cosine distance)."""
     conn = get_db_connection(database_url=database_url)

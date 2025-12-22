@@ -8,7 +8,6 @@ Designed to run as a scheduled job (cron or container).
 import time
 import requests
 from datetime import datetime
-from typing import Optional
 
 
 from database import (
@@ -17,7 +16,7 @@ from database import (
 from bootstrap import get_genai_client
 
 
-def get_last_ingestion_time(database_url: str) -> Optional[datetime]:
+def get_last_ingestion_time(database_url: str) -> datetime | None:
     """Get the timestamp of the last ingested item."""
     conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor()
@@ -73,7 +72,7 @@ def parse_roadmap_item(raw_item: dict) -> RoadmapItem:
     )
 
 
-def filter_new_items(raw_items: list[dict], since: Optional[datetime]) -> list[dict]:
+def filter_new_items(raw_items: list[dict], since: datetime | None) -> list[dict]:
     """Filter items that have been modified since the last ingestion."""
     if since is None:
         print(f"[{datetime.now().isoformat()}] No previous ingestion found, processing all items")
