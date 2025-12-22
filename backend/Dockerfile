@@ -6,8 +6,8 @@ WORKDIR /app
 RUN pip install uv
 
 # Copy dependency files and README
-COPY packages/api/pyproject.toml ./pyproject.toml
-COPY packages/api/README.md ./README.md
+COPY pyproject.toml ./pyproject.toml
+COPY README.md ./README.md
 
 # Create uv.lock
 RUN uv lock
@@ -16,7 +16,7 @@ RUN uv lock
 RUN uv sync --frozen
 
 # Copy source code
-COPY packages/api/src/ ./src/
+COPY src/ ./src/
 
 # Expose port
 EXPOSE 8000

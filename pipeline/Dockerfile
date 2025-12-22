@@ -5,9 +5,11 @@ WORKDIR /app
 # Install uv and cron
 RUN pip install uv && apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /app
+
 # Copy dependency files and README
-COPY packages/ingestion/pyproject.toml ./pyproject.toml
-COPY packages/ingestion/README.md ./README.md
+COPY pyproject.toml ./pyproject.toml
+COPY README.md ./README.md
 
 # Create uv.lock
 RUN uv lock
@@ -16,7 +18,7 @@ RUN uv lock
 RUN uv sync --frozen
 
 # Copy source code
-COPY packages/ingestion/src/ ./src/
+COPY src/ ./src/
 
 # Create the cron job script
 RUN echo '#!/bin/bash\ncd /app && uv run python -m src.ingestion >> /var/log/ingestion.log 2>&1' > /app/run_ingestion.sh && chmod +x /app/run_ingestion.sh

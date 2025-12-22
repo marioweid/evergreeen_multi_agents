@@ -5,35 +5,21 @@ Standalone script for daily M365 Roadmap ingestion with incremental updates.
 Designed to run as a scheduled job (cron or container).
 """
 
-import os
-import sys
 import time
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
-import google.generativeai as genai
 
 from src.database import (
     RoadmapItem, upsert_roadmap_items, get_db_connection, init_db
 )
-
-# M365 Roadmap API
-M365_ROADMAP_API_URL = "https://www.microsoft.com/releasecommunications/api/v1/m365"
+from src.bootstrap import get_genai_client
 
 
-def configure_api():
-    """Configure Gemini API for embeddings."""
-    api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        print("ERROR: GOOGLE_API_KEY or GEMINI_API_KEY environment variable required")
-        sys.exit(1)
-    genai.configure(api_key=api_key)
-
-
-def get_last_ingestion_time() -> Optional[datetime]:
+def get_last_ingestion_time(database_url: str) -> Optional[datetime]:
     """Get the timestamp of the last ingested item."""
-    conn = get_db_connection()
+    conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor()
     cursor.execute("SELECT MAX(updated_at) FROM roadmap_items")
     result = cursor.fetchone()[0]
@@ -46,7 +32,7 @@ def get_last_ingestion_time() -> Optional[datetime]:
     return None
 
 
-def fetch_roadmap_items() -> list[dict]:
+def fetch_roadmap_items(m365_roadmap_url: str) -> list[dict]:
     """Fetch all roadmap items from the M365 API."""
     print(f"[{datetime.now().isoformat()}] Fetching M365 Roadmap data...")
     
@@ -55,7 +41,7 @@ def fetch_roadmap_items() -> list[dict]:
             "Accept": "application/json",
             "User-Agent": "Evergreen-Multi-Agents/1.0"
         }
-        response = requests.get(M365_ROADMAP_API_URL, timeout=60, headers=headers, allow_redirects=True)
+        response = requests.get(m365_roadmap_url, timeout=60, headers=headers, allow_redirects=True)
         response.raise_for_status()
         data = response.json()
         print(f"[{datetime.now().isoformat()}] Fetched {len(data)} total roadmap items")
@@ -112,24 +98,24 @@ def filter_new_items(raw_items: list[dict], since: Optional[datetime]) -> list[d
     return new_items
 
 
-def run_ingestion(full_sync: bool = False):
+def run_ingestion(database_url: str, google_api_key: str, full_sync: bool = False, embedding_model: str = "models/text-embedding-004", embedding_dimensions: int = 768, m365_roadmap_api_url: str = "https://www.microsoft.com/releasecommunications/api/v1/m365"):
     """Run the ingestion process."""
     print(f"\n{'='*60}")
     print(f"[{datetime.now().isoformat()}] Starting Evergreen Ingestion Worker")
     print(f"{'='*60}")
     
     # Initialize
-    configure_api()
-    init_db()
+    init_db(database_url=database_url, embedding_dimensions=embedding_dimensions)
+    genai_client = get_genai_client(api_key=google_api_key)
     
     # Get last ingestion time for incremental updates
-    last_ingestion = None if full_sync else get_last_ingestion_time()
+    last_ingestion = None if full_sync else get_last_ingestion_time(database_url=database_url)
     
     if last_ingestion:
         print(f"[{datetime.now().isoformat()}] Last ingestion: {last_ingestion.isoformat()}")
     
     # Fetch data
-    raw_items = fetch_roadmap_items()
+    raw_items = fetch_roadmap_items(m365_roadmap_url=m365_roadmap_api_url)
     if not raw_items:
         print(f"[{datetime.now().isoformat()}] No items fetched, exiting")
         return
@@ -151,7 +137,7 @@ def run_ingestion(full_sync: bool = False):
     
     for i in range(0, len(parsed_items), batch_size):
         batch = parsed_items[i:i + batch_size]
-        count = upsert_roadmap_items(batch)
+        count = upsert_roadmap_items(items=batch, database_url=database_url, genai_client=genai_client, embedding_model=embedding_model, embedding_dimensions=embedding_dimensions)
         total_ingested += count
         print(f"[{datetime.now().isoformat()}] Ingested batch {i//batch_size + 1}: {count} items")
         
@@ -164,10 +150,23 @@ def run_ingestion(full_sync: bool = False):
 
 
 if __name__ == "__main__":
-    import argparse
+    import os
     
-    parser = argparse.ArgumentParser(description="Evergreen Ingestion Worker")
-    parser.add_argument("--full-sync", action="store_true", help="Force full sync instead of incremental")
-    args = parser.parse_args()
-    
-    run_ingestion(full_sync=args.full_sync)
+    # Read ENV
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        raise ValueError("ERROR: DATABASE_URL environment variable required")
+
+    google_api_key = os.environ.get("GOOGLE_API_KEY")
+    if not google_api_key:
+        raise ValueError("ERROR: GOOGLE_API_KEY environment variable required")
+
+    full_sync = bool(os.environ.get("FULL_SYNC"))
+
+    embedding_model = os.getenv("EMBEDDING_MODEL", "models/text-embedding-004")
+    embedding_dimensions = int(os.getenv("EMBEDDING_DIMENSIONS", 768))
+
+    # M365 Roadmap API
+    m365_roadmap_api_url = os.getenv("M365_ROADMAP_API_URL", "https://www.microsoft.com/releasecommunications/api/v1/m365")
+
+    run_ingestion(database_url=database_url, google_api_key=google_api_key, full_sync=full_sync, m365_roadmap_api_url=m365_roadmap_api_url)

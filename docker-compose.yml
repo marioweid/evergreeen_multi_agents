@@ -19,8 +19,8 @@ services:
 
   api:
     build:
-      context: .
-      dockerfile: Dockerfile.api
+      context: backend
+      dockerfile: Dockerfile
     container_name: evergreen-api
     ports:
       - "8000:8000"
@@ -36,8 +36,8 @@ services:
 
   ingestion:
     build:
-      context: .
-      dockerfile: Dockerfile.ingestion
+      context: pipeline
+      dockerfile: Dockerfile
     container_name: evergreen-ingestion
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
