@@ -5,9 +5,9 @@ Main agent that routes user queries to the appropriate sub-agent.
 """
 
 import google.generativeai as genai
-from src.agents.roadmap_agent import RoadmapAgent
-from src.agents.customer_agent import CustomerAgent
-from src.agents.impact_agent import ImpactAgent
+from agents.roadmap_agent import RoadmapAgent
+from agents.customer_agent import CustomerAgent
+from agents.impact_agent import ImpactAgent
 
 
 def route_to_roadmap_agent(query: str) -> str:

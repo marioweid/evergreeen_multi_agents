@@ -5,7 +5,7 @@ Agent that answers questions about the M365 Roadmap using RAG.
 """
 
 import google.generativeai as genai
-from src.database import search_roadmap, get_roadmap_stats
+from database import search_roadmap, get_roadmap_stats
 
 
 def search_roadmap_tool(query: str, num_results: int = 5) -> str:

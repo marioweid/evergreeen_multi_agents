@@ -5,7 +5,7 @@ Agent that manages customer data with CRUD operations.
 """
 
 import google.generativeai as genai
-from src.database import (
+from database import (
     Customer, add_customer, get_customer, get_customer_by_name,
     list_customers, update_customer, delete_customer
 )

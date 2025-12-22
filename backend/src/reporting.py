@@ -5,7 +5,7 @@ Generates weekly impact reports per customer.
 """
 
 from datetime import datetime
-from src.database import list_customers, search_roadmap, get_roadmap_stats
+from database import list_customers, search_roadmap, get_roadmap_stats
 
 
 def generate_customer_report(customer) -> str:

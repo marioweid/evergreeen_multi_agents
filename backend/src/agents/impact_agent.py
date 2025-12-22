@@ -5,7 +5,7 @@ Agent that analyzes the impact of M365 roadmap changes on specific customers.
 """
 
 import google.generativeai as genai
-from src.database import (
+from database import (
     get_customer, get_customer_by_name, list_customers,
     search_roadmap
 )

@@ -11,8 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import google.generativeai as genai
 
-from src.agents.orchestrator import OrchestratorAgent
-from src.database import init_db, get_roadmap_stats, list_customers
+from agents.orchestrator import OrchestratorAgent
+from database import init_db, get_roadmap_stats, list_customers
 
 
 # Configure Gemini API
