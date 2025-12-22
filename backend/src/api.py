@@ -4,30 +4,23 @@ Evergreen Multi Agents - FastAPI Application
 REST API for querying the M365 Roadmap intelligence system.
 """
 
-import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import google.generativeai as genai
 
 from agents.orchestrator import OrchestratorAgent
 from database import init_db, get_roadmap_stats, list_customers
+from settings import Settings
 
-
-# Configure Gemini API
-def configure_api():
-    api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GOOGLE_API_KEY or GEMINI_API_KEY environment variable required")
-    genai.configure(api_key=api_key)
-
+settings = Settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize resources on startup."""
-    configure_api()
-    init_db()
+    database_url = str(settings.database_url)
+    embedding_dimensions = settings.embedding_dimensions
+
+    init_db(database_url=database_url, embedding_dimensions=embedding_dimensions)
     yield
 
 
@@ -37,16 +30,6 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 # Request/Response models
 class QueryRequest(BaseModel):
@@ -61,17 +44,6 @@ class QueryResponse(BaseModel):
 class StatsResponse(BaseModel):
     roadmap_items: int
     customers: int
-
-
-# Global orchestrator instance (lazy initialization)
-_orchestrator = None
-
-
-def get_orchestrator() -> OrchestratorAgent:
-    global _orchestrator
-    if _orchestrator is None:
-        _orchestrator = OrchestratorAgent()
-    return _orchestrator
 
 
 @app.get("/health")
@@ -102,10 +74,13 @@ async def query_agent(request: QueryRequest):
     - "How do the new Teams features affect Contoso?"
     """
     try:
-        orchestrator = get_orchestrator()
+        orchestrator = OrchestratorAgent(database_url=settings.database_url)
         response = orchestrator.query(request.query)
         return QueryResponse(response=response)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Error occurred: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

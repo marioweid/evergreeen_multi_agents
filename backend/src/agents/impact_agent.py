@@ -4,7 +4,8 @@ Evergreen Multi Agents - Impact Analysis Agent
 Agent that analyzes the impact of M365 roadmap changes on specific customers.
 """
 
-import google.generativeai as genai
+import google.genai as genai
+import google.genai.types as GenerateContentConfig
 from database import (
     get_customer, get_customer_by_name, list_customers,
     search_roadmap
@@ -160,16 +161,18 @@ When analyzing impact:
 Help users prioritize their attention on the most impactful changes for their customer base."""
 
     def __init__(self, model_name: str = "gemini-2.5-flash"):
-        self.model = genai.GenerativeModel(
-            model_name=model_name,
-            system_instruction=self.SYSTEM_PROMPT,
-            tools=IMPACT_TOOLS
-        )
+        self.model_name = model_name
+        self.client = genai.Client()
         self.chat = None
     
     def start_chat(self):
         """Start a new chat session."""
-        self.chat = self.model.start_chat()
+        self.chat = self.client.chats.create(
+            model=self.model_name,
+            config=GenerateContentConfig(
+                tools=IMPACT_TOOLS,
+            ),
+        )
     
     def query(self, user_message: str) -> str:
         """Process a user query and return the response."""

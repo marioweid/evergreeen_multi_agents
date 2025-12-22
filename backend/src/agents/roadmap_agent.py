@@ -4,11 +4,12 @@ Evergreen Multi Agents - Roadmap Agent
 Agent that answers questions about the M365 Roadmap using RAG.
 """
 
-import google.generativeai as genai
+import google.genai as genai
+import google.genai.types as GenerateContentConfig
 from database import search_roadmap, get_roadmap_stats
 
 
-def search_roadmap_tool(query: str, num_results: int = 5) -> str:
+def search_roadmap_tool(query: str, database_url:str, num_results: int = 5) -> str:
     """
     Search the M365 Roadmap for items matching the query.
     
@@ -19,7 +20,7 @@ def search_roadmap_tool(query: str, num_results: int = 5) -> str:
     Returns:
         A formatted string with the search results
     """
-    results = search_roadmap(query, n_results=num_results)
+    results = search_roadmap(query, n_results=num_results, database_url=database_url)
     
     if not results:
         return "No roadmap items found matching your query."
@@ -110,17 +111,20 @@ When a user asks about M365 features, updates, or the roadmap, use the appropria
 
 If you don't find relevant results, suggest alternative search terms or ask the user to clarify their question."""
 
-    def __init__(self, model_name: str = "gemini-2.5-flash"):
-        self.model = genai.GenerativeModel(
-            model_name=model_name,
-            system_instruction=self.SYSTEM_PROMPT,
-            tools=ROADMAP_TOOLS
-        )
+    def __init__(self, database_url: str, model_name: str = "gemini-2.5-flash"):
+        self.database_url = database_url
+        self.model_name = model_name
+        self.client = genai.Client()
         self.chat = None
     
     def start_chat(self):
         """Start a new chat session."""
-        self.chat = self.model.start_chat()
+        self.chat = self.client.chats.create(
+            model=self.model_name,
+            config=GenerateContentConfig(
+                tools=ROADMAP_TOOLS,
+            ),
+        )
     
     def query(self, user_message: str) -> str:
         """Process a user query and return the response."""
@@ -137,6 +141,7 @@ If you don't find relevant results, suggest alternative search terms or ask the 
                 func_call = part.function_call
                 func_name = func_call.name
                 func_args = dict(func_call.args) if func_call.args else {}
+                func_args['database_url'] = self.database_url
                 
                 # Execute the tool
                 tool_result = handle_tool_call(func_name, func_args)

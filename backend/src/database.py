@@ -11,8 +11,9 @@ from psycopg2.extras import RealDictCursor
 from typing import Optional
 from pydantic import BaseModel
 from datetime import datetime
-import google.generativeai as genai
+import google.genai as genai
 from pgvector.psycopg2 import register_vector
+from google.genai.types import EmbedContentConfig, EmbedContentResponse
 
 # Database connection settings
 DATABASE_URL = os.environ.get(
@@ -50,16 +51,16 @@ class RoadmapItem(BaseModel):
     release_phase: Optional[str] = None
 
 
-def get_db_connection():
+def get_db_connection(database_url: str):
     """Get a connection to the PostgreSQL database."""
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = psycopg2.connect(database_url)
     register_vector(conn)
     return conn
 
 
-def init_db() -> None:
+def init_db(database_url: str, embedding_dimensions: int) -> None:
     """Initialize the PostgreSQL database with required tables and extensions."""
-    conn = get_db_connection()
+    conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor()
     
     # Enable pgvector extension
@@ -92,7 +93,7 @@ def init_db() -> None:
             cloud_instances TEXT,
             release_phase TEXT,
             document TEXT NOT NULL,
-            embedding vector({EMBEDDING_DIMENSIONS}),
+            embedding vector({embedding_dimensions}),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -102,30 +103,34 @@ def init_db() -> None:
     conn.close()
 
 
-def get_embedding(text: str) -> list[float]:
+def get_embedding(text: str, genai_client: genai.Client, embedding_model: str, embedding_dimensions: int) -> list[float]:
     """Generate embedding using Gemini's embedding API."""
-    result = genai.embed_content(
-        model=EMBEDDING_MODEL,
+
+    result = genai_client.models.embed_content(
+        model=embedding_model,
         content=text,
-        task_type="retrieval_document"
+        task_type="retrieval_document",
+        config=EmbedContentConfig(output_dimensionality=embedding_dimensions),
     )
     return result['embedding']
 
 
-def get_query_embedding(text: str) -> list[float]:
+def get_query_embedding(text: str, genai_client: genai.Client, embedding_model: str, embedding_dimensions: int) -> list[float]:
     """Generate embedding for a search query."""
-    result = genai.embed_content(
-        model=EMBEDDING_MODEL,
+    result = genai_client.models.embed_content(
+        model=embedding_model,
         content=text,
-        task_type="retrieval_query"
+        task_type="retrieval_query",
+        config=EmbedContentConfig(output_dimensionality=embedding_dimensions),
     )
-    return result['embedding']
+    embeddings = result.embeddings[0]  # since input is single str
+    return embeddings
 
 
 # Customer CRUD Operations
-def add_customer(customer: Customer) -> int:
+def add_customer(customer: Customer, database_url: str) -> int:
     """Add a new customer to the database."""
-    conn = get_db_connection()
+    conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -141,9 +146,9 @@ def add_customer(customer: Customer) -> int:
     return customer_id
 
 
-def get_customer(customer_id: int) -> Optional[Customer]:
+def get_customer(customer_id: int, database_url: str) -> Optional[Customer]:
     """Get a customer by ID."""
-    conn = get_db_connection()
+    conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     
     cursor.execute("SELECT * FROM customers WHERE id = %s", (customer_id,))
@@ -155,9 +160,9 @@ def get_customer(customer_id: int) -> Optional[Customer]:
     return None
 
 
-def get_customer_by_name(name: str) -> Optional[Customer]:
+def get_customer_by_name(name: str, database_url: str) -> Optional[Customer]:
     """Get a customer by name."""
-    conn = get_db_connection()
+    conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     
     cursor.execute("SELECT * FROM customers WHERE name ILIKE %s", (f"%{name}%",))
@@ -169,9 +174,9 @@ def get_customer_by_name(name: str) -> Optional[Customer]:
     return None
 
 
-def list_customers() -> list[Customer]:
+def list_customers(database_url: str) -> list[Customer]:
     """List all customers."""
-    conn = get_db_connection()
+    conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     
     cursor.execute("SELECT * FROM customers ORDER BY name")
@@ -181,12 +186,12 @@ def list_customers() -> list[Customer]:
     return [Customer(**row) for row in rows]
 
 
-def update_customer(customer_id: int, **kwargs) -> bool:
+def update_customer(customer_id: int, database_url: str, **kwargs) -> bool:
     """Update a customer's fields."""
     if not kwargs:
         return False
     
-    conn = get_db_connection()
+    conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor()
     
     set_clause = ", ".join(f"{k} = %s" for k in kwargs.keys())
@@ -216,63 +221,9 @@ def delete_customer(customer_id: int) -> bool:
     return success
 
 
-# Roadmap Vector Operations
-def upsert_roadmap_items(items: list[RoadmapItem]) -> int:
-    """Upsert roadmap items into PostgreSQL with embeddings."""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    count = 0
-    for item in items:
-        document = (
-            f"{item.title}\n\n{item.description}\n\nStatus: {item.status}\n"
-            f"Products: {', '.join(item.products)}\n"
-            f"Platforms: {', '.join(item.platforms)}"
-        )
-        
-        # Generate embedding for this document
-        embedding = get_embedding(document)
-        
-        cursor.execute("""
-            INSERT INTO roadmap_items 
-                (id, title, description, status, release_date, products, 
-                 platforms, cloud_instances, release_phase, document, embedding)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (id) DO UPDATE SET
-                title = EXCLUDED.title,
-                description = EXCLUDED.description,
-                status = EXCLUDED.status,
-                release_date = EXCLUDED.release_date,
-                products = EXCLUDED.products,
-                platforms = EXCLUDED.platforms,
-                cloud_instances = EXCLUDED.cloud_instances,
-                release_phase = EXCLUDED.release_phase,
-                document = EXCLUDED.document,
-                embedding = EXCLUDED.embedding,
-                updated_at = CURRENT_TIMESTAMP
-        """, (
-            item.id,
-            item.title,
-            item.description,
-            item.status,
-            item.public_disclosure_date,
-            ",".join(item.products),
-            ",".join(item.platforms),
-            ",".join(item.cloud_instances),
-            item.release_phase,
-            document,
-            embedding
-        ))
-        count += 1
-    
-    conn.commit()
-    conn.close()
-    return count
-
-
-def search_roadmap(query: str, n_results: int = 5, filter_products: Optional[list[str]] = None) -> list[dict]:
+def search_roadmap(query: str, database_url: str, n_results: int = 5, filter_products: Optional[list[str]] = None) -> list[dict]:
     """Search the roadmap using vector similarity (cosine distance)."""
-    conn = get_db_connection()
+    conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     
     # Generate query embedding
@@ -317,9 +268,9 @@ def search_roadmap(query: str, n_results: int = 5, filter_products: Optional[lis
     return items
 
 
-def get_roadmap_stats() -> dict:
+def get_roadmap_stats(database_url: str) -> dict:
     """Get statistics about the roadmap table."""
-    conn = get_db_connection()
+    conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor()
     
     cursor.execute("SELECT COUNT(*) FROM roadmap_items")

@@ -130,7 +130,7 @@ def upsert_roadmap_items(
 
         # Generate embedding for this document
         embedding = get_embedding(
-            text=document, genai_client=genai_client, embedding_model=embedding_model
+            text=document, genai_client=genai_client, embedding_model=embedding_model, embedding_dimensions=embedding_dimensions
         )
 
         cursor.execute(
