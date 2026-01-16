@@ -1,5 +1,5 @@
 [project]
-name = "evergreen-ingestion"
+name = "pipeline"
 version = "0.1.0"
 description = "Evergreen M365 Roadmap Ingestion Pipeline"
 readme = "README.md"

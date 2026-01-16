@@ -1,5 +1,5 @@
 [project]
-name = "evergreen-api"
+name = "backend"
 version = "0.1.0"
 description = "Evergreen Multi Agents API Service"
 readme = "README.md"
@@ -12,6 +12,7 @@ dependencies = [
     "pgvector>=0.4",
     "google-genai>=1.56.0",
     "pydantic-settings>=2.12.0",
+    "google-adk>=1.22.1",
 ]
 
 [build-system]
