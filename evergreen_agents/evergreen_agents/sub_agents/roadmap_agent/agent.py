@@ -1,8 +1,8 @@
 from google.adk.agents import LlmAgent
-from google.adk.tools.mcp_tool import McpToolset, SseConnectionParams
+from google.adk.tools.mcp_tool import McpToolset, StreamableHTTPConnectionParams
 
 mcp_toolset = McpToolset(
-    connection_params=SseConnectionParams(url="http://localhost:8000/mcp"),
+    connection_params=StreamableHTTPConnectionParams(url="http://localhost:8081/mcp"),
 )
 
 roadmap_agent = LlmAgent(
