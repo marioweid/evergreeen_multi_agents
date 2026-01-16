@@ -17,23 +17,6 @@ services:
       timeout: 5s
       retries: 5
 
-  api:
-    build:
-      context: packages/backend
-      dockerfile: Dockerfile
-    container_name: evergreen-api
-    ports:
-      - "8000:8000"
-    environment:
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - DATABASE_URL=postgresql://evergreen:evergreen@postgres:5432/evergreen
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-    env_file:
-      - .env
-
   ingestion:
     build:
       context: packages/pipeline
