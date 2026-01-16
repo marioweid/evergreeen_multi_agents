@@ -8,7 +8,7 @@ import google.genai as genai
 from google.genai.types import EmbedContentConfig
 
 # Initialize FastMCP server
-mcp = FastMCP("Roadmap Database")
+mcp = FastMCP("Roadmap Database", json_response=True)
 
 # Configuration
 DATABASE_URL = os.environ.get(
@@ -175,7 +175,8 @@ def get_roadmap_stats() -> str:
 
 
 def main():
-    mcp.run()
+    # mcp.run(transport="http", host="0.0.0.0", port=8000)
+    mcp.run(transport="streamable-http")
 
 
 if __name__ == "__main__":

@@ -1,14 +1,15 @@
 [project]
-name = "evergreen-multi-agents"
+name = "adk_agents"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["backend", "pipeline"]
+dependencies = ["backend", "pipeline", "db_mcp", "google-adk>=1.15.1"]
 
 [tool.uv.sources]
 backend = { workspace = true }
 pipeline = { workspace = true }
+db_mcp = { workspace = true }
 
 [tool.uv.workspace]
 members = ["packages/*"]
