@@ -5,6 +5,8 @@ Handles PostgreSQL with pgvector for both customer data and roadmap vector embed
 Uses Google's Gemini embedding API for generating embeddings.
 """
 
+from __future__ import annotations
+
 import google.genai as genai
 from google.genai.types import EmbedContentConfig, EmbedContentResponse
 from psycopg2.extras import RealDictCursor

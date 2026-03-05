@@ -1,1 +1,3 @@
-# Evergreen API Package
+"""Evergreen API Package."""
+
+from __future__ import annotations

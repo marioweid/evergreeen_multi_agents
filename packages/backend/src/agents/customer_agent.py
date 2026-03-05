@@ -4,7 +4,11 @@ Evergreen Multi Agents - Customer Agent
 Agent that manages customer data with CRUD operations.
 """
 
+from __future__ import annotations
+
 import google.genai as genai
+from google.genai.types import GenerateContentConfig
+
 from database import (
     Customer,
     add_customer,
@@ -14,7 +18,6 @@ from database import (
     list_customers,
     update_customer,
 )
-from google.genai.types import GenerateContentConfig
 
 
 def add_customer_tool(
@@ -22,7 +25,8 @@ def add_customer_tool(
     description: str,
     products_used: str,
     priority: str = "medium",
-    notes: str = None,
+    notes: str | None = None,
+    database_url: str | None = None,
 ) -> str:
     """
     Add a new customer to the database.

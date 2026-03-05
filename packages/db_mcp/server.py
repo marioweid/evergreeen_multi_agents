@@ -1,11 +1,16 @@
-import os
+"""MCP server for Roadmap Database operations."""
+
+from __future__ import annotations
+
 import json
+import os
+
+import google.genai as genai
 import psycopg2
-from psycopg2.extras import RealDictCursor
+from google.genai.types import EmbedContentConfig
 from mcp.server.fastmcp import FastMCP
 from pgvector.psycopg2 import register_vector
-import google.genai as genai
-from google.genai.types import EmbedContentConfig
+from psycopg2.extras import RealDictCursor
 
 # Initialize FastMCP server
 mcp = FastMCP("Roadmap Database", json_response=True)

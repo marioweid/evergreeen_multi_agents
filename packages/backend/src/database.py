@@ -5,40 +5,34 @@ Handles PostgreSQL with pgvector for both customer data and roadmap vector embed
 Uses Google's Gemini embedding API for generating embeddings.
 """
 
-import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from pydantic import BaseModel
+from __future__ import annotations
+
 from datetime import datetime
+
 import google.genai as genai
-from pgvector.psycopg2 import register_vector
+import psycopg2
 from google.genai.types import EmbedContentConfig
-
-# Database connection settings
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL", 
-    "postgresql://evergreen:evergreen@localhost:5432/evergreen"
-)
-
-# Embedding model - Gemini's text-embedding-004 outputs 768 dimensions
-EMBEDDING_MODEL = "models/text-embedding-004"
-EMBEDDING_DIMENSIONS = 768
+from psycopg2.extras import RealDictCursor
+from pgvector.psycopg2 import register_vector
+from pydantic import BaseModel
 
 
 class Customer(BaseModel):
     """Customer model for the database."""
+
     id: int | None = None
     name: str
     description: str
-    products_used: str  # Comma-separated list of M365 products
-    priority: str = "medium"  # low, medium, high
+    products_used: str
+    priority: str = "medium"
     notes: str | None = None
-    created_at: datetime| None = None
-    updated_at: datetime| None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class RoadmapItem(BaseModel):
     """Roadmap item model from M365 API."""
+
     id: int
     title: str
     description: str
@@ -50,7 +44,7 @@ class RoadmapItem(BaseModel):
     release_phase: str | None = None
 
 
-def get_db_connection(database_url: str):
+def get_db_connection(database_url: str) -> psycopg2.extensions.connection:
     """Get a connection to the PostgreSQL database."""
     conn = psycopg2.connect(database_url)
     register_vector(conn)
@@ -102,19 +96,28 @@ def init_db(database_url: str, embedding_dimensions: int) -> None:
     conn.close()
 
 
-def get_embedding(text: str, genai_client: genai.Client, embedding_model: str, embedding_dimensions: int) -> list[float]:
+def get_embedding(
+    text: str,
+    genai_client: genai.Client,
+    embedding_model: str,
+    embedding_dimensions: int,
+) -> list[float]:
     """Generate embedding using Gemini's embedding API."""
-
     result = genai_client.models.embed_content(
         model=embedding_model,
         content=text,
         task_type="retrieval_document",
         config=EmbedContentConfig(output_dimensionality=embedding_dimensions),
     )
-    return result['embedding']
+    return result.embedding
 
 
-def get_query_embedding(text: str, genai_client: genai.Client, embedding_model: str, embedding_dimensions: int) -> list[float]:
+def get_query_embedding(
+    text: str,
+    genai_client: genai.Client,
+    embedding_model: str,
+    embedding_dimensions: int,
+) -> list[float]:
     """Generate embedding for a search query."""
     result = genai_client.models.embed_content(
         model=embedding_model,
@@ -122,8 +125,7 @@ def get_query_embedding(text: str, genai_client: genai.Client, embedding_model: 
         task_type="retrieval_query",
         config=EmbedContentConfig(output_dimensionality=embedding_dimensions),
     )
-    embeddings = result.embeddings[0]  # since input is single str
-    return embeddings
+    return result.embedding
 
 
 # Customer CRUD Operations
@@ -185,7 +187,7 @@ def list_customers(database_url: str) -> list[Customer]:
     return [Customer(**row) for row in rows]
 
 
-def update_customer(customer_id: int, database_url: str, **kwargs) -> bool:
+def update_customer(customer_id: int, database_url: str, **kwargs: str) -> bool:
     """Update a customer's fields."""
     if not kwargs:
         return False
@@ -208,9 +210,9 @@ def update_customer(customer_id: int, database_url: str, **kwargs) -> bool:
     return success
 
 
-def delete_customer(customer_id: int) -> bool:
+def delete_customer(customer_id: int, database_url: str) -> bool:
     """Delete a customer by ID."""
-    conn = get_db_connection()
+    conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor()
     
     cursor.execute("DELETE FROM customers WHERE id = %s", (customer_id,))
@@ -220,13 +222,26 @@ def delete_customer(customer_id: int) -> bool:
     return success
 
 
-def search_roadmap(query: str, database_url: str, n_results: int = 5, filter_products: list[str] | None = None) -> list[dict]:
+def search_roadmap(
+    query: str,
+    database_url: str,
+    genai_client: genai.Client,
+    embedding_model: str = "models/text-embedding-004",
+    embedding_dimensions: int = 768,
+    n_results: int = 5,
+    filter_products: list[str] | None = None,
+) -> list[dict]:
     """Search the roadmap using vector similarity (cosine distance)."""
     conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor(cursor_factory=RealDictCursor)
-    
+
     # Generate query embedding
-    query_embedding = get_query_embedding(query)
+    query_embedding = get_query_embedding(
+        text=query,
+        genai_client=genai_client,
+        embedding_model=embedding_model,
+        embedding_dimensions=embedding_dimensions,
+    )
     
     # Build query with optional product filter
     if filter_products:
@@ -267,7 +282,7 @@ def search_roadmap(query: str, database_url: str, n_results: int = 5, filter_pro
     return items
 
 
-def get_roadmap_stats(database_url: str) -> dict:
+def get_roadmap_stats(database_url: str) -> dict[str, int]:
     """Get statistics about the roadmap table."""
     conn = get_db_connection(database_url=database_url)
     cursor = conn.cursor()

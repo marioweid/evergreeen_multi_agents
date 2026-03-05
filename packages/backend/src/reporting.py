@@ -4,11 +4,15 @@ Evergreen Multi Agents - Weekly Report Generator
 Generates weekly impact reports per customer.
 """
 
+from __future__ import annotations
+
 from datetime import datetime
-from database import list_customers, search_roadmap, get_roadmap_stats
+from pathlib import Path
+
+from database import Customer, get_roadmap_stats, list_customers, search_roadmap
 
 
-def generate_customer_report(customer) -> str:
+def generate_customer_report(customer: Customer) -> str:
     """Generate a report for a single customer."""
     products = [p.strip() for p in customer.products_used.split(",")]
     
@@ -82,27 +86,26 @@ def generate_weekly_report() -> str:
     return "\n".join(report)
 
 
-def save_weekly_report(output_path: str = None) -> str:
+def save_weekly_report(output_path: str | None = None) -> str:
     """Generate and save the weekly report."""
     if output_path is None:
-        from pathlib import Path
         reports_dir = Path(__file__).parent.parent / "reports"
         reports_dir.mkdir(exist_ok=True)
         timestamp = datetime.now().strftime("%Y-%m-%d")
-        output_path = reports_dir / f"weekly_report_{timestamp}.md"
-    
+        output_path = str(reports_dir / f"weekly_report_{timestamp}.md")
+
     report = generate_weekly_report()
-    
+
     with open(output_path, "w") as f:
         f.write(report)
-    
+
     return f"Report saved to: {output_path}"
 
 
 if __name__ == "__main__":
     from rich.console import Console
     from rich.markdown import Markdown
-    
+
     console = Console()
     report = generate_weekly_report()
     console.print(Markdown(report))

@@ -1,7 +1,11 @@
-import psycopg2
-from psycopg2 import extensions
+"""Bootstrap utilities for pipeline initialization."""
+
+from __future__ import annotations
+
 import google.genai as genai
+import psycopg2
 from pgvector.psycopg2 import register_vector
+from psycopg2 import extensions
 
 
 def get_db_connection(database_url: str) -> extensions.connection:

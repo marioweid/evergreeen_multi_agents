@@ -1,1 +1,3 @@
-# Evergreen Multi Agents - Agents Package
+"""Evergreen Multi Agents - Agents Package."""
+
+from __future__ import annotations

@@ -4,11 +4,16 @@ Evergreen Multi Agents - Impact Analysis Agent
 Agent that analyzes the impact of M365 roadmap changes on specific customers.
 """
 
+from __future__ import annotations
+
 import google.genai as genai
-import google.genai.types as GenerateContentConfig
+from google.genai.types import GenerateContentConfig
+
 from database import (
-    get_customer, get_customer_by_name, list_customers,
-    search_roadmap
+    get_customer,
+    get_customer_by_name,
+    list_customers,
+    search_roadmap,
 )
 
 

@@ -4,9 +4,12 @@ Evergreen Multi Agents - Roadmap Agent
 Agent that answers questions about the M365 Roadmap using RAG.
 """
 
+from __future__ import annotations
+
 import google.genai as genai
 from google.genai.types import GenerateContentConfig
-from database import search_roadmap, get_roadmap_stats
+
+from database import get_roadmap_stats, search_roadmap
 
 
 def search_roadmap_tool(query: str, database_url: str, num_results: int = 5) -> str:

@@ -5,15 +5,20 @@ Standalone script for daily M365 Roadmap ingestion with incremental updates.
 Designed to run as a scheduled job (cron or container).
 """
 
+from __future__ import annotations
+
 import time
-import requests
 from datetime import datetime
 
+import requests
 
-from database import (
-    RoadmapItem, upsert_roadmap_items, get_db_connection, init_db
-)
 from bootstrap import get_genai_client
+from database import (
+    RoadmapItem,
+    get_db_connection,
+    init_db,
+    upsert_roadmap_items,
+)
 
 
 def get_last_ingestion_time(database_url: str) -> datetime | None:

@@ -4,12 +4,14 @@ Evergreen Multi Agents - Orchestrator Agent
 Main agent that routes user queries to the appropriate sub-agent.
 """
 
+from __future__ import annotations
+
 import google.genai as genai
 from google.genai.types import GenerateContentConfig, Tool
+
 from agents.customer_agent import CustomerAgent
 from agents.impact_agent import ImpactAgent
 from agents.roadmap_agent import RoadmapAgent
-from google.genai.chats import Chat
 
 def route_to_roadmap_agent(query: str, database_url: str) -> str:
     """Route query to the Roadmap Agent for M365 roadmap questions."""
@@ -54,57 +56,6 @@ roadmap_agent_declaration = {
         "required": ["query", "database_url"],
     },
 }
-# ORCHESTRATOR_TOOLS = {
-#     "function_declarations": [
-#         {
-#             "name": "route_to_roadmap_agent",
-#             "description": "Route to the Roadmap Agent for questions about Microsoft 365 roadmap, features, updates, and upcoming changes.",
-#             "parameters": {
-#                 "type": "object",
-#                 "properties": {
-#                     "query": {
-#                         "type": "string",
-#                         "description": "The user's question about the roadmap",
-#                     }
-#                 },
-#                 "required": ["query"],
-#             },
-#         },
-#         {
-#             "name": "route_to_customer_agent",
-#             "description": "Route to the Customer Agent for managing customers - adding, viewing, updating, or deleting customer records.",
-#             "parameters": {
-#                 "type": "object",
-#                 "properties": {
-#                     "query": {
-#                         "type": "string",
-#                         "description": "The user's request about customers",
-#                     }
-#                 },
-#                 "required": ["query"],
-#             },
-#         },
-#         {
-#             "name": "route_to_impact_agent",
-#             "description": "Route to the Impact Agent for analyzing how roadmap changes affect specific customers or for impact reports.",
-#             "parameters": {
-#                 "type": "object",
-#                 "properties": {
-#                     "query": {
-#                         "type": "string",
-#                         "description": "The user's question about impact analysis",
-#                     }
-#                 },
-#                 "required": ["query"],
-#             },
-#         },
-#         {
-#             "name": "refresh_roadmap_data",
-#             "description": "Refresh the roadmap database by fetching latest data from the M365 API.",
-#             "parameters": {"type": "object", "properties": {}},
-#         },
-#     ]
-# }
 
 
 def handle_tool_call(function_name: str, function_args: dict) -> str:
@@ -112,7 +63,6 @@ def handle_tool_call(function_name: str, function_args: dict) -> str:
     if function_name == "route_to_roadmap_agent" or function_name == "roadmap_agent_declaration":
         query = function_args.get("query", "")
         database_url = function_args.get("database_url", "")
-        print(f"PRINT: CALLING FUNCTION WITH {query=} and {database_url=}")
         return route_to_roadmap_agent(
             query=query,
             database_url=database_url,
